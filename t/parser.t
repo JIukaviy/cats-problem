@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use FindBin;
-use Test::More tests => 15;
+use Test::More tests => 16;
 use Test::Exception;
 
 use lib '..';
@@ -43,7 +43,7 @@ subtest 'header', sub {
     plan tests => 8;
     my $d = parse({
         'test.xml' => wrap_xml(q~
-<Problem title="Title" lang="en" author="A. Uthor" tlimit="5" mlimit="6" wlimit="100" inputFile="input.txt" outputFile="output.txt">
+<Problem title="Title" lang="en" author="A. Uthor" tlimit="5" mlimit="6" wlimit="100B" inputFile="input.txt" outputFile="output.txt">
 <Checker src="checker.pp"/>
 </Problem>~),
     'checker.pp' => 'begin end.',
@@ -761,3 +761,110 @@ subtest 'run method', sub {
 
     is_deeply $p->{players_count}, [ 2, 4, 5 ], 'run method = competitive, players_count = 2,4-5';
 };
+
+subtest 'memory unit suffix', sub {
+    plan tests => 12;
+    throws_ok { parse({
+        'test.xml' => wrap_xml(q~
+<Problem title="asd" lang="en" tlimit="5" inputFile="asd" outputFile="asd" mlimit="asd">
+<Checker src="checker.pp"/>
+</Problem>~),
+    'checker.pp' => 'begin end.',
+    }) } qr/Bad memory limit/, 'bad mlimit asd';
+
+    throws_ok { parse({
+        'test.xml' => wrap_xml(q~
+<Problem title="asd" lang="en" tlimit="5" inputFile="asd" outputFile="asd" mlimit="K">
+<Checker src="checker.pp"/>
+</Problem>~),
+    'checker.pp' => 'begin end.',
+    }) } qr/Bad memory limit/, 'bad mlimit K';
+
+    throws_ok { parse({
+        'test.xml' => wrap_xml(q~
+<Problem title="asd" lang="en" tlimit="5" inputFile="asd" outputFile="asd" mlimit="10K">
+<Checker src="checker.pp"/>
+</Problem>~),
+    'checker.pp' => 'begin end.',
+    }) } qr/Value of memory must be in whole Mbytes/, 'mlimit 10K';
+
+    my $d = parse({
+        'test.xml' => wrap_xml(q~
+<Problem title="asd" lang="en" tlimit="5" inputFile="asd" outputFile="asd" mlimit="1024K">
+<Checker src="checker.pp"/>
+</Problem>~),
+    'checker.pp' => 'begin end.',
+    })->{description};
+    is $d->{memory_limit}, 1, 'mlimit 1024K';
+
+    my $d = parse({
+        'test.xml' => wrap_xml(q~
+<Problem title="asd" lang="en" tlimit="5" inputFile="asd" outputFile="asd" mlimit="1M">
+<Checker src="checker.pp"/>
+</Problem>~),
+    'checker.pp' => 'begin end.',
+    })->{description};
+    is $d->{memory_limit}, 1, 'mlimit 1M';
+
+    my $d = parse({
+        'test.xml' => wrap_xml(q~
+<Problem title="asd" lang="en" tlimit="5" inputFile="asd" outputFile="asd" mlimit="1">
+<Checker src="checker.pp"/>
+</Problem>~),
+    'checker.pp' => 'begin end.',
+    })->{description};
+    is $d->{memory_limit}, 1, 'mlimit 1';
+
+
+    throws_ok { parse({
+        'test.xml' => wrap_xml(q~
+<Problem title="asd" lang="en" tlimit="5" inputFile="asd" outputFile="asd" wlimit="asd">
+<Checker src="checker.pp"/>
+</Problem>~),
+    'checker.pp' => 'begin end.',
+    }) } qr/Bad write limit/, 'bad wlimit asd';
+
+    throws_ok { parse({
+        'test.xml' => wrap_xml(q~
+<Problem title="asd" lang="en" tlimit="5" inputFile="asd" outputFile="asd" wlimit="K">
+<Checker src="checker.pp"/>
+</Problem>~),
+    'checker.pp' => 'begin end.',
+    }) } qr/Bad write limit/, 'bad wlimit K';
+
+    my $d = parse({
+        'test.xml' => wrap_xml(q~
+<Problem title="asd" lang="en" tlimit="5" inputFile="asd" outputFile="asd" wlimit="10B">
+<Checker src="checker.pp"/>
+</Problem>~),
+    'checker.pp' => 'begin end.',
+    })->{description};
+    is $d->{write_limit}, 10, 'wlimit 10B';
+
+    my $d = parse({
+        'test.xml' => wrap_xml(q~
+<Problem title="asd" lang="en" tlimit="5" inputFile="asd" outputFile="asd" wlimit="2K">
+<Checker src="checker.pp"/>
+</Problem>~),
+    'checker.pp' => 'begin end.',
+    })->{description};
+    is $d->{write_limit}, 2048, 'wlimit 2KB';
+
+    my $d = parse({
+        'test.xml' => wrap_xml(q~
+<Problem title="asd" lang="en" tlimit="5" inputFile="asd" outputFile="asd" wlimit="1M">
+<Checker src="checker.pp"/>
+</Problem>~),
+    'checker.pp' => 'begin end.',
+    })->{description};
+    is $d->{write_limit}, 1048576, 'wlimit 1M';
+
+    my $d = parse({
+        'test.xml' => wrap_xml(q~
+<Problem title="asd" lang="en" tlimit="5" inputFile="asd" outputFile="asd" wlimit="1">
+<Checker src="checker.pp"/>
+</Problem>~),
+    'checker.pp' => 'begin end.',
+    })->{description};
+    is $d->{write_limit}, 1048576, 'wlimit 1';
+}
