@@ -24,10 +24,12 @@ sub get_problem {
 
     my $problem = $dbh->selectrow_hashref(q~
         SELECT
-            id, title, upload_date, time_limit, memory_limit,
-            input_file, output_file, std_checker, contest_id, formal_input,
-            run_method, players_count
-        FROM problems WHERE id = ?~, { Slice => {}, ib_timestampformat => '%d-%m-%Y %H:%M:%S' }, $pid);
+            P.id, P.title, P.upload_date, P.time_limit, P.memory_limit,
+            P.input_file, P.output_file, P.std_checker, P.contest_id, P.formal_input,
+            P.run_method, P.players_count, CP.status
+        FROM problems P
+            INNER JOIN contest_problems CP ON CP.problem_id = P.id
+        WHERE P.id = ?~, { Slice => {}, ib_timestampformat => '%d-%m-%Y %H:%M:%S' }, $pid);
     $problem->{run_method} //= $cats::rm_default;
     $problem;
 }
